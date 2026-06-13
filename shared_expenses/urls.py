@@ -31,6 +31,9 @@ urlpatterns = [
     # Why: Routes to expenses creation and detail views.
     path('', include('expenses.urls')),
     
+    # Why: Routes to balance summary, detail breakdown, and simplified debts views.
+    path('', include('balances.urls')),
+    
     # Why: Main application dashboard / home landing page.
     path('', TemplateView.as_view(template_name='accounts/home.html'), name='home'),
 ]

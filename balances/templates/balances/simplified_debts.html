@@ -1,0 +1,66 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Who Pays Whom — {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="card shadow-sm border">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-1">Who Pays Whom</h4>
+                <small>Simplified settlement transactions for {{ group.name }}</small>
+            </div>
+            <div class="card-body">
+                {% if transactions %}
+                <p class="text-muted mb-3">
+                    The following <strong>{{ transactions|length }}</strong> transaction{{ transactions|length|pluralize }}
+                    will fully settle all outstanding balances in this group.
+                </p>
+                <table class="table table-hover" id="simplified-debts-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>From (Pays)</th>
+                            <th class="text-center">→</th>
+                            <th>To (Receives)</th>
+                            <th class="text-end">Amount (INR)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for from_user, to_user, amount in transactions %}
+                        <tr>
+                            <td class="text-muted">{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ from_user.name }}</strong>
+                                <br><small class="text-muted">{{ from_user.email }}</small>
+                            </td>
+                            <td class="text-center fs-5 text-primary">→</td>
+                            <td>
+                                <strong>{{ to_user.name }}</strong>
+                                <br><small class="text-muted">{{ to_user.email }}</small>
+                            </td>
+                            <td class="text-end fw-bold text-primary fs-5">
+                                {{ amount }} INR
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="alert alert-success" role="alert">
+                    <strong>All settled!</strong> No outstanding balances in this group.
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer text-muted d-flex justify-content-between">
+                <a href="{% url 'group_balance_summary' pk=group.pk %}" class="btn btn-outline-secondary btn-sm">
+                    ← Back to Group Balances
+                </a>
+                <a href="{% url 'group_detail' pk=group.pk %}" class="btn btn-outline-secondary btn-sm">
+                    ← Back to Group
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

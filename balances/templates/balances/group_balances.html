@@ -1,0 +1,68 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Balances — {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="card shadow-sm border">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Group Balances — {{ group.name }}</h4>
+                <a href="{% url 'simplified_debts' pk=group.pk %}" class="btn btn-light btn-sm">
+                    Who Pays Whom →
+                </a>
+            </div>
+            <div class="card-body">
+                {% if balances %}
+                <table class="table table-hover" id="balances-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Member</th>
+                            <th>Email</th>
+                            <th class="text-end">Net Balance (INR)</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member, balance in balances %}
+                        <tr>
+                            <td>{{ member.name }}</td>
+                            <td class="text-muted">{{ member.email }}</td>
+                            <td class="text-end fw-bold {% if balance > 0 %}text-success{% elif balance < 0 %}text-danger{% else %}text-secondary{% endif %}">
+                                {% if balance > 0 %}+{% endif %}{{ balance }} INR
+                            </td>
+                            <td class="text-center">
+                                {% if balance > 0 %}
+                                    <span class="badge bg-success">Owed money</span>
+                                {% elif balance < 0 %}
+                                    <span class="badge bg-danger">Owes money</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Settled</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'balance_detail' group_pk=group.pk user_pk=member.pk %}"
+                                   class="btn btn-outline-primary btn-sm">
+                                    Drill Down
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="alert alert-info" role="alert">
+                    No members or expenses found for this group yet.
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer text-muted">
+                <a href="{% url 'group_detail' pk=group.pk %}" class="btn btn-outline-secondary btn-sm">
+                    ← Back to Group
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

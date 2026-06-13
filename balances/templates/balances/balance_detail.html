@@ -1,0 +1,90 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Balance Detail — {{ member.name }} in {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="card shadow-sm border">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-1">Balance Breakdown</h4>
+                <small>{{ member.name }} ({{ member.email }}) in {{ group.name }}</small>
+            </div>
+            <div class="card-body">
+                <!-- Net Balance Summary -->
+                <div class="alert {% if net_total > 0 %}alert-success{% elif net_total < 0 %}alert-danger{% else %}alert-secondary{% endif %}" role="alert">
+                    <strong>Net Balance:</strong>
+                    <span class="fs-5 fw-bold">
+                        {% if net_total > 0 %}+{% endif %}{{ net_total }} INR
+                    </span>
+                    {% if net_total > 0 %}
+                        — {{ member.name }} is owed money
+                    {% elif net_total < 0 %}
+                        — {{ member.name }} owes money
+                    {% else %}
+                        — Fully settled
+                    {% endif %}
+                </div>
+
+                <!-- Line-by-line Breakdown -->
+                {% if breakdown %}
+                <table class="table table-sm table-hover" id="breakdown-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th class="text-end">Amount (INR)</th>
+                            <th class="text-center">Record</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in breakdown %}
+                        <tr class="{% if row.type == 'expense_credit' or row.type == 'settlement_credit' %}table-success{% elif row.type == 'expense_debit' or row.type == 'settlement_debit' %}table-danger{% endif %}">
+                            <td>{{ row.date }}</td>
+                            <td>
+                                {% if row.type == 'expense_credit' %}
+                                    <span class="badge bg-success">Credit (Paid)</span>
+                                {% elif row.type == 'expense_debit' %}
+                                    <span class="badge bg-danger">Debit (Share)</span>
+                                {% elif row.type == 'settlement_credit' %}
+                                    <span class="badge bg-info">Settlement Paid</span>
+                                {% elif row.type == 'settlement_debit' %}
+                                    <span class="badge bg-warning text-dark">Settlement Received</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ row.description }}</td>
+                            <td class="text-end fw-bold {% if row.amount > 0 %}text-success{% elif row.amount < 0 %}text-danger{% endif %}">
+                                {% if row.amount > 0 %}+{% endif %}{{ row.amount }}
+                            </td>
+                            <td class="text-center">
+                                <small class="text-muted">{{ row.record_model }} #{{ row.record_id }}</small>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr class="fw-bold">
+                            <td colspan="3" class="text-end">Net Total:</td>
+                            <td class="text-end {% if net_total > 0 %}text-success{% elif net_total < 0 %}text-danger{% endif %}">
+                                {% if net_total > 0 %}+{% endif %}{{ net_total }} INR
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                {% else %}
+                <div class="alert alert-info" role="alert">
+                    No expense or settlement records found for {{ member.name }} in this group.
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer text-muted">
+                <a href="{% url 'group_balance_summary' pk=group.pk %}" class="btn btn-outline-secondary btn-sm">
+                    ← Back to Group Balances
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

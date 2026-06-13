@@ -16,7 +16,8 @@
                     Created by <strong>{{ group.created_by.name }}</strong> on {{ group.created_at|date:"F d, Y" }}
                 </p>
             </div>
-            <div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'group_balance_summary' pk=group.id %}" class="btn btn-outline-light fw-bold px-4">View Balances</a>
                 <a href="{% url 'expense_create' %}?group={{ group.id }}" class="btn btn-light text-primary fw-bold px-4">+ Record Expense</a>
             </div>
         </div>
