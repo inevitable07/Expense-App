@@ -341,6 +341,30 @@ class GroupTemplateViewsTests(TestCase):
         self.assertContains(response, "Creator")
         self.assertContains(response, "Other User")
 
+    def test_detail_view_renders_expenses(self):
+        """
+        Why: Assures the group details page lists expenses associated with the group.
+        """
+        self.client.login(username=self.creator.email, password="password123")
+        # Create an expense for the group
+        from expenses.models import Expense
+        expense = Expense.objects.create(
+            group=self.group,
+            paid_by=self.creator,
+            description="Shared Uber Ride",
+            date=date(2026, 1, 2),
+            original_amount=120.50,
+            original_currency="INR",
+            split_type="EQUAL"
+        )
+        
+        response = self.client.get(self.detail_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('expenses', response.context)
+        self.assertEqual(list(response.context['expenses']), [expense])
+        self.assertContains(response, "Shared Uber Ride")
+        self.assertContains(response, "120.50 INR")
+
     def test_add_member_view_success(self):
         """
         Why: Assures adding a member via POST request successfully registers them.
