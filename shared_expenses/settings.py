@@ -152,3 +152,8 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Custom User Model configuration
+# Why: Directs Django to use our custom accounts.User model for authentication,
+# enabling email-based identification instead of default username-based.
+AUTH_USER_MODEL = 'accounts.User'

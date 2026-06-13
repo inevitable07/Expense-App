@@ -1,0 +1,32 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Dashboard - Shared Expenses{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6 text-center">
+        <div class="p-5 mb-4 bg-light rounded-3 shadow-sm border">
+            <div class="container-fluid py-4">
+                <h1 class="display-5 fw-bold text-dark mb-3">Welcome to Shared Expenses</h1>
+                
+                {% if user.is_authenticated %}
+                    <p class="col-md-12 fs-5 text-muted">
+                        Hello <strong class="text-primary">{{ user.name }}</strong>! You are securely logged in as <strong>{{ user.email }}</strong>.
+                    </p>
+                    <div class="mt-4">
+                        <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-lg px-4">Log Out</a>
+                    </div>
+                {% else %}
+                    <p class="col-md-12 fs-5 text-muted">
+                        Split bills, track balances, and manage group settlements with ease. Please sign up or log in to get started.
+                    </p>
+                    <div class="d-flex justify-content-center gap-3 mt-4">
+                        <a href="{% url 'login' %}" class="btn btn-primary btn-lg px-4">Log In</a>
+                        <a href="{% url 'signup' %}" class="btn btn-outline-secondary btn-lg px-4">Sign Up</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
