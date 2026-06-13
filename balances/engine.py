@@ -60,69 +60,120 @@ from decimal import Decimal
 from django.db.models import Q, Sum
 from groups.models import GroupMembership
 from expenses.models import Expense, ExpenseSplit
+from settlements.models import Settlement
 
 
 # =====================================================================
 # SECTION 1: SETTLEMENT EXTENSION POINTS
 # =====================================================================
-# Why: The settlements app has no model yet. These isolated helpers
-# return zero/empty results and serve as the ONLY integration points.
-# When the Settlement model is created, update ONLY these two functions.
+# Why: Integrating the settlements app here allows net balances and
+# breakdowns to correctly reflect direct payment transfers between users.
 # =====================================================================
 
 def _get_settlement_net(user, group, eligible_expense_ids):
     """
-    Extension point for settlement net balance contribution.
+    Retrieves the net settlement contribution for a user's balance.
 
-    Why: Isolates all settlement queries into a single function so that
-    the rest of the engine does not need to change when the Settlement
-    model is implemented.
-
-    When the settlements module is built, this should return:
-        (settlement_credit - settlement_debit) as Decimal
-    where:
-        settlement_credit = sum of amounts where paid_by == user
-        settlement_debit  = sum of amounts where paid_to == user
-
-    Parameters:
-        user: The User instance whose settlement net is being computed.
-        group: The Group instance to scope settlements to.
-        eligible_expense_ids: QuerySet or list of Expense IDs that fall
-            within the user's membership window. Provided for consistency
-            filtering if settlements are linked to specific expenses.
-
-    Returns:
-        Decimal: Net settlement amount (currently always Decimal('0.00')).
-    """
-    # EXTENSION POINT: Replace with actual Settlement queries when model exists.
-    return Decimal('0.00')
-
-
-def _get_settlement_rows(user, group, eligible_expense_ids):
-    """
-    Extension point for settlement breakdown rows.
-
-    Why: Isolates settlement row retrieval so that get_balance_breakdown()
-    does not need structural changes when the Settlement model is created.
-
-    When the settlements module is built, this should return a list of dicts:
-        [{'type': 'settlement_credit' or 'settlement_debit',
-          'date': date,
-          'description': str,
-          'amount': Decimal (signed),
-          'record_id': int,
-          'record_model': 'Settlement'}]
+    Why: Settlement payments made by a user (paid_by == user) reduce their debt,
+    representing a credit (positive). Payments received (paid_to == user) represent
+    a debit (negative). Both must be restricted to dates within the user's
+    membership window.
 
     Parameters:
         user: The User instance.
         group: The Group instance.
-        eligible_expense_ids: QuerySet or list of eligible Expense IDs.
+        eligible_expense_ids: Provided for consistency.
 
     Returns:
-        list: Empty list (no Settlement model exists yet).
+        Decimal: The net settlement contribution (credits - debits).
     """
-    # EXTENSION POINT: Replace with actual Settlement row queries when model exists.
-    return []
+    # Why: Retrieve the user's membership dates in the group to filter settlements.
+    date_ranges = _get_membership_date_ranges(user, group)
+    if not date_ranges:
+        return Decimal('0.00')
+
+    # Why: Filter to only include settlements that occurred during active membership windows.
+    window_filter = Q()
+    for joined_at, left_at in date_ranges:
+        if left_at is None:
+            window_filter |= Q(date__gte=joined_at)
+        else:
+            window_filter |= Q(date__gte=joined_at, date__lte=left_at)
+
+    # Why: Sum of payments made by the user to others (credits).
+    settlement_credit = Settlement.objects.filter(
+        Q(group=group, paid_by=user) & window_filter
+    ).aggregate(total=Sum('amount_inr'))['total'] or Decimal('0.00')
+
+    # Why: Sum of payments received by the user from others (debits).
+    settlement_debit = Settlement.objects.filter(
+        Q(group=group, paid_to=user) & window_filter
+    ).aggregate(total=Sum('amount_inr'))['total'] or Decimal('0.00')
+
+    return settlement_credit - settlement_debit
+
+
+def _get_settlement_rows(user, group, eligible_expense_ids):
+    """
+    Retrieves the list of settlement rows that compose a user's balance.
+
+    Why: Provides line-by-line audit traceability in Rohan's drill-down breakdown.
+    Each returned row represents a concrete Settlement record.
+
+    Parameters:
+        user: The User instance.
+        group: The Group instance.
+        eligible_expense_ids: Provided for consistency.
+
+    Returns:
+        list of dicts containing:
+            - type: 'settlement_credit' (paid out) or 'settlement_debit' (received)
+            - date: date
+            - description: str (includes other member name)
+            - amount: Decimal (signed)
+            - record_id: int
+            - record_model: 'Settlement'
+    """
+    date_ranges = _get_membership_date_ranges(user, group)
+    if not date_ranges:
+        return []
+
+    window_filter = Q()
+    for joined_at, left_at in date_ranges:
+        if left_at is None:
+            window_filter |= Q(date__gte=joined_at)
+        else:
+            window_filter |= Q(date__gte=joined_at, date__lte=left_at)
+
+    # Why: Fetch all settlements involving the user within the membership windows.
+    settlements = Settlement.objects.filter(
+        Q(group=group) & (Q(paid_by=user) | Q(paid_to=user)) & window_filter
+    ).select_related('paid_by', 'paid_to').order_by('date')
+
+    rows = []
+    for s in settlements:
+        if s.paid_by == user:
+            # Why: Payments made by the user are positive credit rows.
+            rows.append({
+                'type': 'settlement_credit',
+                'date': s.date,
+                'description': f"Settlement paid to {s.paid_to.name}",
+                'amount': s.amount_inr,
+                'record_id': s.id,
+                'record_model': 'Settlement',
+            })
+        else:
+            # Why: Payments received by the user are negative debit rows.
+            rows.append({
+                'type': 'settlement_debit',
+                'date': s.date,
+                'description': f"Settlement received from {s.paid_by.name}",
+                'amount': -s.amount_inr,
+                'record_id': s.id,
+                'record_model': 'Settlement',
+            })
+
+    return rows
 
 
 # =====================================================================

@@ -1,0 +1,134 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Record a Payment — Shared Expenses{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm border auth-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold text-dark mb-0">Record a Payment</h2>
+            </div>
+            
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" id="settlement-form" novalidate>
+                {% csrf_token %}
+                
+                <!-- Group Select -->
+                <div class="mb-3">
+                    <label class="form-label" for="id_group">Group</label>
+                    {{ form.group }}
+                    <div class="text-danger small mt-1">{{ form.group.errors }}</div>
+                </div>
+
+                <!-- Paid By (Debtor) -->
+                <div class="mb-3">
+                    <label class="form-label" for="id_paid_by">Paid By (Who Pays)</label>
+                    {{ form.paid_by }}
+                    <div class="text-danger small mt-1">{{ form.paid_by.errors }}</div>
+                </div>
+
+                <!-- Paid To (Creditor) -->
+                <div class="mb-3">
+                    <label class="form-label" for="id_paid_to">Paid To (Who Receives)</label>
+                    {{ form.paid_to }}
+                    <div class="text-danger small mt-1">{{ form.paid_to.errors }}</div>
+                </div>
+
+                <!-- Amount -->
+                <div class="mb-3">
+                    <label class="form-label" for="id_amount_inr">Amount (INR)</label>
+                    {{ form.amount_inr }}
+                    <div class="text-danger small mt-1">{{ form.amount_inr.errors }}</div>
+                </div>
+
+                <!-- Date -->
+                <div class="mb-3">
+                    <label class="form-label" for="id_date">Date</label>
+                    {{ form.date }}
+                    <div class="text-danger small mt-1">{{ form.date.errors }}</div>
+                </div>
+
+                <!-- Note -->
+                <div class="mb-3">
+                    <label class="form-label" for="id_note">Note / Reference</label>
+                    {{ form.note }}
+                    <div class="text-danger small mt-1">{{ form.note.errors }}</div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    {% if preselected_group %}
+                        <a href="{% url 'group_detail' pk=preselected_group.pk %}" class="btn btn-outline-secondary btn-sm">Cancel</a>
+                    {% else %}
+                        <a href="{% url 'group_list' %}" class="btn btn-outline-secondary btn-sm">Cancel</a>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary px-4">Record Settlement</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Client-side script to dynamically adjust Paid By/To dropdown options based on Group -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const groupSelect = document.getElementById('id_group');
+        const paidBySelect = document.getElementById('id_paid_by');
+        const paidToSelect = document.getElementById('id_paid_to');
+
+        // Dynamic JSON mapping group_id to member array
+        const groupMembers = {{ group_members_json|safe }};
+
+        // Cache pre-filled selection if any
+        const initialPaidBy = "{{ form.paid_by.value|default:'' }}";
+        const initialPaidTo = "{{ form.paid_to.value|default:'' }}";
+
+        function updateMemberDropdowns() {
+            const groupId = groupSelect.value;
+            const members = groupMembers[groupId] || [];
+
+            // Fetch current selection
+            const currentPaidBy = paidBySelect.value || initialPaidBy;
+            const currentPaidTo = paidToSelect.value || initialPaidTo;
+
+            // Clear and reload
+            paidBySelect.innerHTML = '<option value="">---------</option>';
+            paidToSelect.innerHTML = '<option value="">---------</option>';
+
+            members.forEach(function(member) {
+                const optionBy = document.createElement('option');
+                optionBy.value = member.id;
+                optionBy.textContent = member.name + ' (' + member.email + ')';
+                paidBySelect.appendChild(optionBy);
+
+                const optionTo = document.createElement('option');
+                optionTo.value = member.id;
+                optionTo.textContent = member.name + ' (' + member.email + ')';
+                paidToSelect.appendChild(optionTo);
+            });
+
+            // Reapply values if they belong to the loaded group
+            if (members.some(m => m.id == currentPaidBy)) {
+                paidBySelect.value = currentPaidBy;
+            }
+            if (members.some(m => m.id == currentPaidTo)) {
+                paidToSelect.value = currentPaidTo;
+            }
+        }
+
+        if (groupSelect) {
+            groupSelect.addEventListener('change', updateMemberDropdowns);
+            // Run on load to handle pre-populated query param initial state
+            updateMemberDropdowns();
+        }
+    });
+</script>
+{% endblock %}

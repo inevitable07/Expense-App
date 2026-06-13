@@ -1,0 +1,83 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Settlement History — {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="card shadow-sm border auth-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold text-dark mb-1">Settlements History</h2>
+                    <p class="text-muted mb-0">Chronological record of direct payments for <strong>{{ group.name }}</strong></p>
+                </div>
+                <a href="{% url 'settlement_create' %}?group={{ group.pk }}" class="btn btn-primary btn-sm">
+                    + Record a Payment
+                </a>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if settlements %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="settlements-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>From (Paid By)</th>
+                                <th class="text-center">→</th>
+                                <th>To (Paid To)</th>
+                                <th class="text-end">Amount (INR)</th>
+                                <th>Note / Reference</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in settlements %}
+                                <tr>
+                                    <td>{{ s.date|date:"Y-m-d" }}</td>
+                                    <td>
+                                        <strong>{{ s.paid_by.name }}</strong>
+                                        <br><small class="text-muted">{{ s.paid_by.email }}</small>
+                                    </td>
+                                    <td class="text-center text-primary fs-5">→</td>
+                                    <td>
+                                        <strong>{{ s.paid_to.name }}</strong>
+                                        <br><small class="text-muted">{{ s.paid_to.email }}</small>
+                                    </td>
+                                    <td class="text-end fw-bold text-success">
+                                        {{ s.amount_inr }} INR
+                                    </td>
+                                    <td class="text-muted small">
+                                        {{ s.note|default:"—" }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-info py-4 text-center" role="alert">
+                    <h5 class="alert-heading fw-bold mb-2">No Settlements Found</h5>
+                    <p class="mb-0 text-muted">No direct payment settlements have been recorded in this group yet.</p>
+                </div>
+            {% endif %}
+
+            <div class="card-footer bg-white border-0 px-0 pt-4 d-flex justify-content-between">
+                <a href="{% url 'group_detail' pk=group.pk %}" class="btn btn-outline-secondary btn-sm">
+                    ← Back to Group
+                </a>
+                <a href="{% url 'group_balance_summary' pk=group.pk %}" class="btn btn-outline-primary btn-sm">
+                    View Balances →
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

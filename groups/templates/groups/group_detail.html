@@ -151,6 +151,16 @@
 
     <!-- Actions/Add Member Sidebar -->
     <div class="col-lg-4 mb-4">
+        <!-- Settlements Card -->
+        <div class="card auth-card p-4 border mb-4">
+            <h4 class="fw-bold text-dark mb-3">Settlements</h4>
+            <p class="text-muted small mb-3">Record payments directly between members to settle balances.</p>
+            <div class="d-grid gap-2">
+                <a href="{% url 'settlement_create' %}?group={{ group.id }}" class="btn btn-outline-primary w-100">Record a Payment</a>
+                <a href="{% url 'settlement_list' group_id=group.id %}" class="btn btn-outline-secondary w-100">View Settlement History</a>
+            </div>
+        </div>
+
         <div class="card auth-card p-4 border mb-4">
             <h4 class="fw-bold text-dark mb-3">Add Group Member</h4>
             <p class="text-muted small mb-4">Invite registered users to this expense sharing group.</p>
