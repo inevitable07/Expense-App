@@ -1,0 +1,211 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Create Expense - Shared Expenses{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card auth-card p-4 border shadow-sm">
+            <h2 class="fw-bold text-dark mb-4 text-center">Record New Expense</h2>
+            
+            {% if messages %}
+                <div class="alert alert-danger">
+                    {% for message in messages %}
+                        <div>{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <form method="post" id="expense-form" novalidate>
+                {% csrf_token %}
+                
+                <div class="row">
+                    <!-- Basic details column -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="id_group">Group</label>
+                        {{ form.group }}
+                        <div class="text-danger small">{{ form.group.errors }}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="id_paid_by">Paid By</label>
+                        {{ form.paid_by }}
+                        <div class="text-danger small">{{ form.paid_by.errors }}</div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label" for="id_description">Description</label>
+                        {{ form.description }}
+                        <div class="text-danger small">{{ form.description.errors }}</div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="id_date">Date</label>
+                        {{ form.date }}
+                        <div class="text-danger small">{{ form.date.errors }}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="id_split_type">Split Strategy</label>
+                        {{ form.split_type }}
+                        <div class="text-danger small">{{ form.split_type.errors }}</div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label" for="id_original_amount">Original Amount</label>
+                        {{ form.original_amount }}
+                        <div class="text-danger small">{{ form.original_amount.errors }}</div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label" for="id_original_currency">Currency</label>
+                        {{ form.original_currency }}
+                        <div class="text-danger small">{{ form.original_currency.errors }}</div>
+                    </div>
+                    <div class="col-md-4 mb-3" id="fx-rate-container">
+                        <label class="form-label" for="id_fx_rate_used">Exchange Rate Used</label>
+                        {{ form.fx_rate_used }}
+                        <div class="text-danger small">{{ form.fx_rate_used.errors }}</div>
+                        <div id="fx-rate-warning" class="text-warning small mt-1 d-none">
+                            <strong>Warning:</strong> No active exchange rates found. Please add daily FX Rates in the Admin dashboard first.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Splitting Allocation section -->
+                <div class="card bg-light p-3 border rounded-3 mt-4 mb-4 d-none" id="splits-card">
+                    <h5 class="fw-bold text-dark mb-3" id="split-section-title">Split Details</h5>
+                    <p class="text-muted small" id="split-section-instructions">Enter allocation values for each active member.</p>
+                    
+                    <div id="split-members-container" class="row">
+                        <!-- Rendered dynamically via JavaScript -->
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between gap-3 mt-4">
+                    <a href="{% url 'group_list' %}" class="btn btn-outline-secondary w-50">Cancel</a>
+                    <button type="submit" class="btn btn-primary w-50">Save Expense</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Raw membership JSON script mapping -->
+{{ group_members_json|json_script:"group-members-data" }}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const groupSelect = document.getElementById("id_group");
+        const dateInput = document.getElementById("id_date");
+        const splitTypeSelect = document.getElementById("id_split_type");
+        const currencySelect = document.getElementById("id_original_currency");
+        
+        const fxRateContainer = document.getElementById("fx-rate-container");
+        const splitsCard = document.getElementById("splits-card");
+        const membersContainer = document.getElementById("split-members-container");
+        const sectionTitle = document.getElementById("split-section-title");
+        const instructions = document.getElementById("split-section-instructions");
+
+        const groupMembers = JSON.parse(document.getElementById("group-members-data").textContent);
+
+        // Prepopulate default date to today if empty
+        if (!dateInput.value) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+        }
+
+        const fxRateSelect = document.getElementById("id_fx_rate_used");
+        const fxRateWarning = document.getElementById("fx-rate-warning");
+
+        // Toggle FXRate selection depending on USD currency selection
+        function toggleFxRateField() {
+            if (currencySelect.value !== "INR") {
+                fxRateContainer.classList.remove("d-none");
+                if (fxRateSelect && fxRateSelect.options.length <= 1) {
+                    fxRateWarning.classList.remove("d-none");
+                } else {
+                    fxRateWarning.classList.add("d-none");
+                }
+            } else {
+                fxRateContainer.classList.add("d-none");
+                fxRateWarning.classList.add("d-none");
+            }
+        }
+
+        // Render splitting inputs depending on group, date and split type selection
+        function renderSplitFields() {
+            const groupId = parseInt(groupSelect.value);
+            const selectedDateStr = dateInput.value;
+            const splitType = splitTypeSelect.value;
+            
+            membersContainer.innerHTML = "";
+            
+            if (!groupId || !selectedDateStr || !splitType) {
+                splitsCard.classList.add("d-none");
+                return;
+            }
+
+            const members = groupMembers[groupId] || [];
+            // Filter active members on selected date using robust string comparison (ISO format YYYY-MM-DD)
+            const activeMembers = members.filter(m => {
+                const joinedAt = m.joined_at;
+                const leftAt = m.left_at;
+                return joinedAt <= selectedDateStr && (leftAt === null || leftAt >= selectedDateStr);
+            });
+
+            if (activeMembers.length === 0) {
+                splitsCard.classList.remove("d-none");
+                sectionTitle.textContent = "Split Details";
+                instructions.textContent = "No active members found in this group on the selected date.";
+                return;
+            }
+
+            if (splitType === "EQUAL") {
+                splitsCard.classList.add("d-none"); // Equal splits are calculated automatically in the backend
+                return;
+            }
+
+            splitsCard.classList.remove("d-none");
+            sectionTitle.textContent = `Split Details (${splitType} distribution)`;
+            
+            let typeLabel = "Value";
+            let typePlaceholder = "0.00";
+            if (splitType === "EXACT") {
+                typeLabel = "Amount (INR)";
+                typePlaceholder = "Amount in INR";
+            } else if (splitType === "PERCENTAGE") {
+                typeLabel = "Percentage (%)";
+                typePlaceholder = "% share";
+            } else if (splitType === "SHARES") {
+                typeLabel = "Share count";
+                typePlaceholder = "Number of shares";
+            }
+            instructions.textContent = `Specify the individual ${typeLabel.toLowerCase()} allocations for active members.`;
+
+            activeMembers.forEach(m => {
+                const col = document.createElement("div");
+                col.className = "col-md-6 mb-3";
+                
+                col.innerHTML = `
+                    <label class="form-label small fw-bold text-secondary mb-1">${m.name} (${m.email})</label>
+                    <input type="number" step="any" name="split_val_${m.id}" class="form-control" placeholder="${typePlaceholder}" required>
+                `;
+                membersContainer.appendChild(col);
+            });
+        }
+
+        // Attach event listeners
+        groupSelect.addEventListener("change", renderSplitFields);
+        dateInput.addEventListener("change", renderSplitFields);
+        splitTypeSelect.addEventListener("change", renderSplitFields);
+        currencySelect.addEventListener("change", toggleFxRateField);
+
+        // Run initial states
+        toggleFxRateField();
+        renderSplitFields();
+    });
+</script>
+{% endblock %}

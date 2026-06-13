@@ -189,14 +189,17 @@ class GroupDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         """
-        Why: Appends the membership history and adding/removing member forms
-        to the template context.
+        Why: Appends the membership history, adding/removing member forms, and
+        the list of associated group expenses to the template context.
         """
         context = super().get_context_data(**kwargs)
         context['memberships'] = self.object.memberships.all().order_by('joined_at')
         context['add_member_form'] = AddMemberForm()
         context['remove_member_form'] = RemoveMemberForm()
         context['today'] = timezone.now().date()
+        # Why: Retrieves all expenses related to the group, ordered newest first,
+        # so they can be rendered in the group details dashboard.
+        context['expenses'] = self.object.expenses.all().order_by('-date', '-id')
         return context
 
 class GroupAddMemberView(LoginRequiredMixin, View):

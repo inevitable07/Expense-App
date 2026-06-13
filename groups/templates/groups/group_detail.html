@@ -9,11 +9,16 @@
 
 <div class="row mb-4">
     <div class="col-md-12">
-        <div class="card auth-card p-4 bg-dark text-light border-0 shadow-sm">
-            <h1 class="fw-bold mb-1 text-light">{{ group.name }}</h1>
-            <p class="text-secondary mb-0">
-                Created by <strong>{{ group.created_by.name }}</strong> on {{ group.created_at|date:"F d, Y" }}
-            </p>
+        <div class="card auth-card p-4 bg-dark text-light border-0 shadow-sm d-flex flex-row justify-content-between align-items-center">
+            <div>
+                <h1 class="fw-bold mb-1 text-light">{{ group.name }}</h1>
+                <p class="text-secondary mb-0">
+                    Created by <strong>{{ group.created_by.name }}</strong> on {{ group.created_at|date:"F d, Y" }}
+                </p>
+            </div>
+            <div>
+                <a href="{% url 'expense_create' %}?group={{ group.id }}" class="btn btn-light text-primary fw-bold px-4">+ Record Expense</a>
+            </div>
         </div>
     </div>
 </div>
@@ -32,9 +37,55 @@
 {% endif %}
 
 <div class="row">
-    <!-- Members List Column -->
+    <!-- Members & Expenses Column -->
     <div class="col-lg-8 mb-4">
-        <div class="card auth-card p-4 border h-100">
+        <!-- Expenses Card -->
+        <div class="card auth-card p-4 border mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="fw-bold text-dark mb-0">Expenses History</h3>
+                <span class="badge bg-secondary text-light">{{ expenses.count }} records</span>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr class="text-muted small uppercase">
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Paid By</th>
+                            <th>Original Amount</th>
+                            <th>Base Amount</th>
+                            <th>Split Type</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if expenses %}
+                            {% for expense in expenses %}
+                                <tr>
+                                    <td>{{ expense.date|date:"Y-m-d" }}</td>
+                                    <td><strong>{{ expense.description }}</strong></td>
+                                    <td>{{ expense.paid_by.name }}</td>
+                                    <td>{{ expense.original_amount }} {{ expense.original_currency }}</td>
+                                    <td class="text-primary fw-bold">{{ expense.amount_inr }} INR</td>
+                                    <td><span class="badge bg-light text-dark border">{{ expense.get_split_type_display }}</span></td>
+                                    <td class="text-end">
+                                        <a href="{% url 'expense_detail' expense.id %}" class="btn btn-outline-primary btn-sm">View Splits</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">No expenses recorded in this group yet.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Members History Card -->
+        <div class="card auth-card p-4 border">
             <h3 class="fw-bold text-dark mb-4">Members History</h3>
             
             <div class="table-responsive">

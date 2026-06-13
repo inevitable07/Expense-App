@@ -28,6 +28,9 @@ urlpatterns = [
     # Why: Routes to groups and memberships API endpoints/template views.
     path('', include('groups.urls')),
     
+    # Why: Routes to expenses creation and detail views.
+    path('', include('expenses.urls')),
+    
     # Why: Main application dashboard / home landing page.
     path('', TemplateView.as_view(template_name='accounts/home.html'), name='home'),
 ]

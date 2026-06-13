@@ -1,0 +1,104 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Expense Details - Shared Expenses{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'group_detail' expense.group.id %}" class="text-primary text-decoration-none fw-medium">&larr; Back to Group Dashboard</a>
+</div>
+
+{% if messages %}
+    <div class="row">
+        <div class="col-12">
+            {% for message in messages %}
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+
+<div class="row">
+    <!-- Left Column: Details Card -->
+    <div class="col-lg-6 mb-4">
+        <div class="card auth-card p-4 border h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="badge bg-primary text-light px-3 py-2">Expense Details</span>
+                <span class="badge bg-success text-light px-3 py-2">{{ expense.get_status_display }}</span>
+            </div>
+            
+            <h2 class="fw-bold text-dark mb-1">{{ expense.description }}</h2>
+            <p class="text-muted mb-4">In group <strong>{{ expense.group.name }}</strong></p>
+            
+            <hr class="my-4">
+            
+            <div class="row mb-3">
+                <div class="col-6">
+                    <span class="text-muted small d-block">PAID BY</span>
+                    <strong class="text-dark">{{ expense.paid_by.name }}</strong>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted small d-block">TRANSACTION DATE</span>
+                    <strong class="text-dark">{{ expense.date|date:"F d, Y" }}</strong>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-6">
+                    <span class="text-muted small d-block">ORIGINAL AMOUNT</span>
+                    <strong class="text-dark">{{ expense.original_amount }} {{ expense.original_currency }}</strong>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted small d-block">BASE AMOUNT (INR)</span>
+                    <strong class="text-primary">{{ expense.amount_inr }} INR</strong>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-6">
+                    <span class="text-muted small d-block">SPLIT TYPE</span>
+                    <strong class="text-dark">{{ expense.get_split_type_display }}</strong>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted small d-block">SOURCE</span>
+                    <strong class="text-dark">{{ expense.get_source_display }}</strong>
+                </div>
+            </div>
+
+            {% if expense.original_currency != 'INR' %}
+                <div class="card bg-light p-3 border rounded-3 mt-4">
+                    <span class="text-muted small d-block mb-1">CURRENCY CONVERSION</span>
+                    <p class="mb-0 text-dark small">
+                        Converted at rate <strong>{{ expense.fx_rate_used.rate }}</strong> (effective {{ expense.fx_rate_used.effective_date }})
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right Column: Split Breakdown List -->
+    <div class="col-lg-6 mb-4">
+        <div class="card auth-card p-4 border h-100">
+            <h3 class="fw-bold text-dark mb-4">Split Shares</h3>
+            
+            <ul class="list-group list-group-flush">
+                {% if splits %}
+                    {% for split in splits %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <div>
+                                <h6 class="fw-bold text-dark mb-0">{{ split.user.name }}</h6>
+                                <small class="text-muted">{{ split.user.email }}</small>
+                            </div>
+                            <span class="fs-5 fw-bold text-dark">{{ split.share_amount_inr }} INR</span>
+                        </li>
+                    {% endfor %}
+                {% else %}
+                    <li class="list-group-item px-0 py-3 text-center text-muted">No splits computed for this expense.</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
