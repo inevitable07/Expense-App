@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import environ
 import os
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -34,10 +35,12 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-fyfcn65dspg-^e08uf#%z+u$
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Why: Loaded from environment variables to easily toggle debug logging and templates across environments.
-DEBUG = env('DEBUG', default=True)
+# Defaults to False in production for security.
+DEBUG = env.bool('DEBUG', default=False)
 
 # Why: Loaded from environment to define valid HTTP Host headers for security against host header injection.
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
+# Defaults to local dev addresses for local safety.
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
 
 
 # Application definition
@@ -73,6 +76,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Why: Serving compressed and cached static files directly via Django on Render.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -105,10 +110,15 @@ WSGI_APPLICATION = 'shared_expenses.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # Database Configuration
-# Why: Uses django-environ's db connection URL schema. If DATABASE_URL is provided in .env,
-# it connects to PostgreSQL using psycopg2. Otherwise, falls back to a local SQLite database for local verification.
+# Why: Uses dj-database-url to parse DATABASE_URL. If DATABASE_URL is provided in environment,
+# it connects to PostgreSQL using psycopg2 with connection pooling (conn_max_age) and SSL required.
+# Otherwise, falls back to local SQLite database.
 DATABASES = {
-    'default': env.db('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}')
+    'default': dj_database_url.config(
+        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        conn_max_age=600,
+        ssl_require=False if DEBUG else True
+    )
 }
 
 
@@ -147,6 +157,19 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+# Why: Set static root directory for collectstatic command
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Why: Configure storages using modern Django 4.2+ dictionary layout, enabling
+# WhiteNoise's compressed and cached static files storage in production.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

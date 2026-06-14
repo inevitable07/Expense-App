@@ -63,24 +63,3 @@ If you are planning to test USD transaction imports, you must seed exchange rate
    ```powershell
    python manage.py runserver
    ```
-3. Navigate to `http://127.0.0.1:8000/admin/`, log in, and add rates under the **Core** -> **FX Rates** section (e.g. `USD` to `INR` rate for transaction dates).
-
-### 5. Running the Test Suite
-To run all automated unit and integration tests:
-```powershell
-# To run tests on default database
-python manage.py test
-
-# To run tests locally on SQLite (extremely fast)
-$env:DATABASE_URL="sqlite://"; python manage.py test
-```
-
----
-
-## AI Tools Used
-This project was developed in partnership with **Antigravity**, Google DeepMind's agentic coding assistant, utilizing advanced terminal control, file modification systems, and autonomous verification.
-
----
-
-## Deployed Application
-The application is deployed and available at: [https://tracker-db-el1c.onrender.com](https://tracker-db-el1c.onrender.com) (Placeholder)
