@@ -75,11 +75,15 @@ class ImportReviewView(LoginRequiredMixin, DetailView):
     def post(self, request, batch_id):
         """
         Why: Saves the reviewer's decisions on each anomaly. Updates anomaly statuses
-        and batch status under an atomic transaction.
+        and applies the batch to create Expenses/Settlements if all anomalies are resolved.
         """
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from .applier import apply_import
+
         batch = get_object_or_404(ImportBatch, pk=batch_id)
         anomalies = batch.anomalies.all()
 
+        # Step 1: Save reviewer decisions in an atomic transaction first
         with transaction.atomic():
             for anomaly in anomalies:
                 # Why: Read the decision values submitted from the form inputs
@@ -95,11 +99,51 @@ class ImportReviewView(LoginRequiredMixin, DetailView):
                     anomaly.final_action = submitted_action
                     anomaly.save()
 
-            # Why: Mark batch as approved now that decisions have been committed.
-            # (Note: Actual application logic to generate Expenses/Settlements
-            # will be integrated in the next prompt phase).
-            batch.status = 'APPROVED'
-            batch.save()
+        # Step 2: Check if any anomalies are still PENDING.
+        # If none, try applying the batch import in a separate block.
+        pending_count = batch.anomalies.filter(status='PENDING').count()
+        if pending_count == 0:
+            try:
+                # Apply the batch import to create database records
+                records = apply_import(batch)
+                messages.success(
+                    request, 
+                    f"Import applied successfully! Created {records['expenses']} expenses, "
+                    f"{records['splits']} splits, and {records['settlements']} settlements."
+                )
+                return redirect('import_report', batch_id=batch.id)
+            except DjangoValidationError as e:
+                error_msg = "; ".join([f"{k}: {v[0]}" for k, v in e.message_dict.items()]) if hasattr(e, 'message_dict') else str(e)
+                messages.error(request, f"Import application failed: {error_msg}")
+            except Exception as e:
+                messages.error(request, f"An unexpected error occurred during import application: {str(e)}")
+        else:
+            messages.warning(
+                request, 
+                f"Saved decisions. {pending_count} anomalies are still pending review. "
+                "All anomalies must be approved, rejected, or modified to apply the import."
+            )
 
-        messages.success(request, "Your decisions have been saved successfully.")
         return redirect('import_review', batch_id=batch.id)
+
+
+
+class ImportReportView(LoginRequiredMixin, DetailView):
+    """
+    Renders the import audit and reconciliation report for a batch.
+
+    Why: Allows Meera and other group members to audit what was actually imported,
+    which records were created, which were skipped, and review the approval history trail.
+    """
+    model = ImportBatch
+    pk_url_kwarg = 'batch_id'
+    template_name = 'imports/import_report.html'
+    context_object_name = 'batch'
+
+    def get_context_data(self, **kwargs):
+        from .report import generate_import_report
+        context = super().get_context_data(**kwargs)
+        context['report'] = generate_import_report(self.object)
+        return context
+
+

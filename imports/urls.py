@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ImportUploadView, ImportReviewView
+from .views import ImportUploadView, ImportReviewView, ImportReportView
 
 urlpatterns = [
     # Why: Routes to the CSV uploading page scoped to a specific group.
@@ -15,4 +15,12 @@ urlpatterns = [
         ImportReviewView.as_view(),
         name='import_review'
     ),
+
+    # Why: Routes to the import audit/reconciliation report page.
+    path(
+        'imports/batch/<int:batch_id>/report/',
+        ImportReportView.as_view(),
+        name='import_report'
+    ),
 ]
+

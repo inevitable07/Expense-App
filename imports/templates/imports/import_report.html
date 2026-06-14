@@ -1,0 +1,235 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Import Audit Report — Batch #{{ report.batch_id }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-11 col-lg-9">
+        <div class="card shadow-sm border auth-card p-4">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+                <div>
+                    <h2 class="fw-bold text-dark mb-1">Import Audit &amp; Reconciliation Report</h2>
+                    <p class="text-muted mb-0">
+                        Batch #{{ report.batch_id }} &nbsp;|&nbsp; 
+                        Group: <strong>{{ report.group_name }}</strong> &nbsp;|&nbsp;
+                        Uploaded By: <strong>{{ report.uploaded_by }}</strong>
+                    </p>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-success fs-6 px-3 py-2">Applied</span>
+                    <p class="small text-muted mt-1 mb-0">{{ report.uploaded_at|date:"Y-m-d H:i" }}</p>
+                </div>
+            </div>
+
+            <!-- Success Alert -->
+            <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
+                <svg class="bi flex-shrink-0 me-2" width="24" height="24" role="img" aria-label="Success:"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
+                <div>
+                    <strong>Reconciliation complete!</strong> The transactions have been audited, resolved, and committed. See audit trail logs below.
+                </div>
+            </div>
+
+            <!-- Metric Summary Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card border border-success-subtle bg-success-subtle bg-opacity-10 p-3 h-100 shadow-xs">
+                        <h6 class="text-success fw-bold text-uppercase small mb-1">Expenses Created</h6>
+                        <h2 class="fw-black text-dark mb-0">{{ report.expenses_created_count }}</h2>
+                        <p class="small text-muted mb-0 mt-1">Written to ledger, splits generated</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border border-primary-subtle bg-primary-subtle bg-opacity-10 p-3 h-100 shadow-xs">
+                        <h6 class="text-primary fw-bold text-uppercase small mb-1">Settlements Created</h6>
+                        <h2 class="fw-black text-dark mb-0">{{ report.settlements_created_count }}</h2>
+                        <p class="small text-muted mb-0 mt-1">Debt repayments recorded</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border border-danger-subtle bg-danger-subtle bg-opacity-10 p-3 h-100 shadow-xs">
+                        <h6 class="text-danger fw-bold text-uppercase small mb-1">Rows Skipped</h6>
+                        <h2 class="fw-black text-dark mb-0">{{ report.skipped_rows_count }}</h2>
+                        <p class="small text-muted mb-0 mt-1">Rejected during review gate</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detail Sections Tabbed Navigation -->
+            <ul class="nav nav-tabs mb-3" id="reportTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-bold text-success" id="expenses-tab" data-bs-toggle="tab" data-bs-target="#expenses-pane" type="button" role="tab" aria-controls="expenses-pane" aria-selected="true">
+                        Expenses ({{ report.expenses_created_count }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold text-primary" id="settlements-tab" data-bs-toggle="tab" data-bs-target="#settlements-pane" type="button" role="tab" aria-controls="settlements-pane" aria-selected="false">
+                        Settlements ({{ report.settlements_created_count }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold text-danger" id="skipped-tab" data-bs-toggle="tab" data-bs-target="#skipped-pane" type="button" role="tab" aria-controls="skipped-pane" aria-selected="false">
+                        Skipped Rows ({{ report.skipped_rows_count }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold text-secondary" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-pane" type="button" role="tab" aria-controls="history-pane" aria-selected="false">
+                        Approval History
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="reportTabsContent">
+                <!-- Expenses Pane -->
+                <div class="tab-pane fade show active" id="expenses-pane" role="tabpanel" aria-labelledby="expenses-tab">
+                    {% if report.expenses %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border-top">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Description</th>
+                                        <th>Payer</th>
+                                        <th class="text-end">Original Amount</th>
+                                        <th class="text-end">Amount (INR)</th>
+                                        <th>Split Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for exp in report.expenses %}
+                                        <tr>
+                                            <td class="small">{{ exp.date|date:"Y-m-d" }}</td>
+                                            <td>
+                                                <div class="fw-bold">{{ exp.description }}</div>
+                                                <div class="small text-muted">
+                                                    Splits: 
+                                                    {% for split in exp.splits.all %}
+                                                        {{ split.user.name }} ({{ split.share_amount_inr }} INR){% if not forloop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                            </td>
+                                            <td>{{ exp.paid_by.name }}</td>
+                                            <td class="text-end fw-semibold text-muted">{{ exp.original_amount }} {{ exp.original_currency }}</td>
+                                            <td class="text-end fw-bold text-dark">{{ exp.amount_inr }} INR</td>
+                                            <td><span class="badge bg-secondary">{{ exp.get_split_type_display }}</span></td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted py-4 text-center">No expenses were created in this batch.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Settlements Pane -->
+                <div class="tab-pane fade" id="settlements-pane" role="tabpanel" aria-labelledby="settlements-tab">
+                    {% if report.settlements %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border-top">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Paid By (Debtor)</th>
+                                        <th>Paid To (Creditor)</th>
+                                        <th class="text-end">Amount</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for set in report.settlements %}
+                                        <tr>
+                                            <td class="small">{{ set.date|date:"Y-m-d" }}</td>
+                                            <td class="fw-semibold text-danger">{{ set.paid_by.name }}</td>
+                                            <td class="fw-semibold text-success">{{ set.paid_to.name }}</td>
+                                            <td class="text-end fw-bold text-dark">{{ set.amount_inr }} INR</td>
+                                            <td class="small text-muted">{{ set.note }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted py-4 text-center">No debt settlements were created in this batch.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Skipped Rows Pane -->
+                <div class="tab-pane fade" id="skipped-pane" role="tabpanel" aria-labelledby="skipped-tab">
+                    {% if report.skipped_rows %}
+                        <div class="d-grid gap-3 py-2">
+                            {% for row in report.skipped_rows %}
+                                <div class="card border border-danger-subtle bg-danger-subtle bg-opacity-10 p-3 shadow-xs">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="badge bg-danger">Row {{ row.row_index }}</span>
+                                        <span class="text-muted small">Amount: {{ row.amount }} {{ row.currency }}</span>
+                                    </div>
+                                    <h6 class="fw-bold mb-1">{{ row.description }}</h6>
+                                    <p class="small text-muted mb-2">Payer input: {{ row.paid_by }}</p>
+                                    <div class="border-top pt-2">
+                                        <div class="small fw-bold text-danger mb-1">Triggered Anomalies:</div>
+                                        <ul class="mb-0 ps-3 small">
+                                            {% for anom in row.anomalies %}
+                                                <li>
+                                                    <strong>[{{ anom.anomaly_type }}]</strong>: {{ anom.description }} <br>
+                                                    <span class="text-muted">Decision: <strong>REJECTED</strong> | Override Action: {{ anom.final_action }}</span>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted py-4 text-center">No CSV rows were skipped in this batch.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Approval History Pane -->
+                <div class="tab-pane fade" id="history-pane" role="tabpanel" aria-labelledby="history-tab">
+                    {% if report.approval_history %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border-top">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Row Reference</th>
+                                        <th>Anomaly Type</th>
+                                        <th>Review Decision</th>
+                                        <th>Final Action Log</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for hist in report.approval_history %}
+                                        <tr>
+                                            <td><span class="badge bg-secondary">{{ hist.row_reference }}</span></td>
+                                            <td class="fw-bold small">{{ hist.anomaly_type }}</td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if hist.status == 'APPROVED' %}bg-success
+                                                    {% elif hist.status == 'MODIFIED' %}bg-warning text-dark
+                                                    {% else %}bg-danger{% endif %}">
+                                                    {{ hist.status }}
+                                                </span>
+                                            </td>
+                                            <td class="small text-muted">{{ hist.final_action }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted py-4 text-center">No anomalies were recorded for auditing in this batch.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Footer actions -->
+            <div class="card-footer bg-white border-0 px-0 pt-4 d-flex justify-content-between">
+                <a href="{% url 'group_detail' pk=batch.group.pk %}" class="btn btn-primary px-4 fw-bold">
+                    Back to Group Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

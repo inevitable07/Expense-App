@@ -325,6 +325,97 @@ Map to a supported currency or provide an exchange rate.
 
 ---
 
+## 14. Split Type Mismatch
+
+### Description
+
+The expense declares one split type but the actual distribution data follows a different split strategy.
+
+Examples:
+
+Declared:
+
+EQUAL
+
+Actual:
+
+* Aisha = 500
+* Rohan = 300
+* Priya = 200
+
+or
+
+Declared:
+
+PERCENTAGE
+
+Actual percentages do not sum to 100%.
+
+### Detection Rule
+
+Compare:
+
+* split_type column
+* split allocation data
+
+Flag when the allocation does not match the declared split type.
+
+### Policy
+
+Do not silently recalculate splits.
+
+Require user review.
+
+### Suggested Action
+
+Ask user whether:
+
+* split_type is incorrect
+* split allocation values are incorrect
+
+Import only after approval.
+
+---
+
+## 15. Membership Change Events
+
+### Description
+
+The CSV contains information indicating that:
+
+* a member joined the group
+* a member left the group
+
+but the membership history in the system does not match the imported data.
+
+Examples:
+
+* Sam joined in April
+* Meera left in March
+
+### Detection Rule
+
+Detect rows indicating:
+
+* join events
+* leave events
+* participant changes
+
+or identify expenses referencing users outside their recorded membership window.
+
+### Policy
+
+Do not automatically modify membership history.
+
+Require review.
+
+### Suggested Action
+
+Create or update GroupMembership records only after approval.
+
+Membership changes must remain fully auditable.
+
+
 # General Import Principle
 
 The import system must never silently modify, delete, merge, or reinterpret financial data.
