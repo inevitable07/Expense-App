@@ -1,0 +1,44 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Import Expenses — {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm border auth-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold text-dark mb-0">Import Expenses</h2>
+            </div>
+            
+            <p class="text-muted small mb-4">
+                Upload a CSV file containing transactions to import. The file will be parsed and scanned for anomalies before review.
+            </p>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label class="form-label" for="id_csv_file">{{ form.csv_file.label }}</label>
+                    {{ form.csv_file }}
+                    <div class="text-muted small mt-1">{{ form.csv_file.help_text }}</div>
+                    <div class="text-danger small mt-1">{{ form.csv_file.errors }}</div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'group_detail' pk=group.pk %}" class="btn btn-outline-secondary btn-sm">Cancel</a>
+                    <button type="submit" class="btn btn-primary px-4">Upload & Scan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

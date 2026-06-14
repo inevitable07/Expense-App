@@ -36,6 +36,9 @@ urlpatterns = [
 
     # Why: Routes to settlement payment creation and history list views.
     path('', include('settlements.urls')),
+
+    # Why: Routes to CSV import file uploads and batch reviews.
+    path('', include('imports.urls')),
     
     # Why: Main application dashboard / home landing page.
     path('', TemplateView.as_view(template_name='accounts/home.html'), name='home'),

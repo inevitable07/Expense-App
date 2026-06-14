@@ -161,6 +161,15 @@
             </div>
         </div>
 
+        <!-- CSV Import Card -->
+        <div class="card auth-card p-4 border mb-4">
+            <h4 class="fw-bold text-dark mb-3">Import Transactions</h4>
+            <p class="text-muted small mb-3">Upload a CSV file containing transactions to import and review.</p>
+            <div class="d-grid gap-2">
+                <a href="{% url 'import_upload' group_id=group.id %}" class="btn btn-outline-primary w-100">Import CSV File</a>
+            </div>
+        </div>
+
         <div class="card auth-card p-4 border mb-4">
             <h4 class="fw-bold text-dark mb-3">Add Group Member</h4>
             <p class="text-muted small mb-4">Invite registered users to this expense sharing group.</p>
