@@ -133,3 +133,5 @@ conda-env/
 .env.development
 .env.staging
 .env.production
+import_raw_files/*.csv
+staticfiles/
