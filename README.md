@@ -1,40 +1,86 @@
-# Shared Expenses Application
+# Shared Expense Tracker (ExpenseApp)
 
-A Django 5.x project designed for splitting expenses, managing group balances, and resolving settlements with high traceability.
+A modern, resilient multi-currency expense sharing application designed to calculate, simplify, and track balances within groups, featuring time-bound memberships, automated anomaly detection, and a review-approval workflow for CSV imports.
 
-## Technology Stack
-- **Core**: Django 5.x, Django REST Framework
-- **Database**: PostgreSQL (via `psycopg2-binary`)
-- **Environment**: `.env`-based settings using `django-environ`
+---
 
-## Project Structure
-The project is decoupled into independent, self-contained Django apps:
-- `core`: Shared base components, global validators, and common utilities.
-- `accounts`: User authentication, identity, and profile management.
-- `groups`: Expense sharing groups and member tracking.
-- `expenses`: Expense entry details and splitting strategies.
-- `balances`: Real-time ledger calculations for net member obligations.
-- `settlements`: Verification and lifecycle of settlements/repayments.
-- `imports`: Importing external data (e.g. CSV logs) with ledger traceability.
+## Technical Architecture Overview
 
-## Installation & Setup
+The system is built on **Django 5.2** and structured into the following applications:
+- **`accounts`**: Implements a custom `User` model using `email` as the unique identifier.
+- **`core`**: Contains system-wide models like `FXRate` to handle daily currency exchange rates (USD to INR).
+- **`groups`**: Models `Group` and `GroupMembership` (supporting historical time-bound join/leave intervals).
+- **`expenses`**: Handles `Expense` tracking and `ExpenseSplit` calculations (supporting Equal, Exact, Percentage, and Shares distribution models).
+- **`settlements`**: Manages direct peer-to-peer `Settlement` transactions to clear outstanding balances.
+- **`balances`**: Houses the financial calculation engine (`balances/engine.py`) which computes net positions, line-by-line audit breakdowns, and simplifies debts.
+- **`imports`**: Manages the CSV upload pipeline, automated scans using 15 custom `AnomalyDetector` subclasses, audit logging, and manual reconciliation before applying records.
 
-1. **Clone the repository** and navigate to the root directory.
-2. **Create and activate a virtual environment**:
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate
+---
+
+## Local Setup Instructions
+
+### Prerequisites
+- Python 3.12+
+- PostgreSQL (or fallback local SQLite)
+- Virtual Environment tool (`venv`)
+
+### 1. Set Up Environment Variables
+Create a `.env` file in the root directory `e:\ExpenseApp` by copying `.env.example`:
+```ini
+SECRET_KEY=your-django-secret-key
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+DATABASE_URL=postgresql://db_user:db_password@localhost:5432/expense_db
+```
+*Note: If `DATABASE_URL` is omitted, the application will automatically fall back to using a local SQLite database (`db.sqlite3`).*
+
+### 2. Configure Virtual Environment and Dependencies
+In your terminal/PowerShell, run:
+```powershell
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment
+.venv\Scripts\Activate.ps1
+
+# Install requirements
+pip install -r requirements.txt
+```
+
+### 3. Run Migrations
+Generate and apply database migrations:
+```powershell
+python manage.py migrate
+```
+
+### 4. Seed Foreign Exchange (FX) Rates
+If you are planning to test USD transaction imports, you must seed exchange rates in the database. 
+1. Create a superuser:
+   ```powershell
+   python manage.py createsuperuser
    ```
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. **Configure the Environment**:
-   - Copy `.env.example` to `.env`.
-   - Update `DATABASE_URL` with your local PostgreSQL credentials.
-   - (Optional) If `DATABASE_URL` is omitted, the project defaults to a local SQLite database for easy testing.
-5. **Run Migrations & Start Server**:
-   ```bash
-   python manage.py migrate
+2. Run the development server:
+   ```powershell
    python manage.py runserver
    ```
+3. Navigate to `http://127.0.0.1:8000/admin/`, log in, and add rates under the **Core** -> **FX Rates** section (e.g. `USD` to `INR` rate for transaction dates).
+
+### 5. Running the Test Suite
+To run all automated unit and integration tests:
+```powershell
+# To run tests on default database
+python manage.py test
+
+# To run tests locally on SQLite (extremely fast)
+$env:DATABASE_URL="sqlite://"; python manage.py test
+```
+
+---
+
+## AI Tools Used
+This project was developed in partnership with **Antigravity**, Google DeepMind's agentic coding assistant, utilizing advanced terminal control, file modification systems, and autonomous verification.
+
+---
+
+## Deployed Application
+The application is deployed and available at: [https://tracker-db-el1c.onrender.com](https://tracker-db-el1c.onrender.com) (Placeholder)
